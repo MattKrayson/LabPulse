@@ -70,7 +70,11 @@ def login(body: LoginRequest, request: Request, response: Response) -> dict:
         key=COOKIE_NAME,
         value=token,
         httponly=True,
-        samesite="lax",
+        # Strict blocks the cookie on cross-site requests entirely (including top-level
+        # navigations from other sites), which is the strongest built-in CSRF defence
+        # available without adding a separate token - acceptable here since this is a
+        # same-origin SPA with no legitimate cross-site link/embed use case.
+        samesite="strict",
         max_age=settings.session_expire_minutes * 60,
         path="/",
     )
