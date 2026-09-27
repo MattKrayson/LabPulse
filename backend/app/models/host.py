@@ -8,6 +8,7 @@ than the local Unix socket.
 """
 from datetime import datetime, timezone
 
+from sqlalchemy import Column, Text
 from sqlmodel import Field, SQLModel
 
 
@@ -31,3 +32,12 @@ class Host(SQLModel, table=True):
     status: str = Field(default="unknown")  # "connected" | "error" | "unknown"
     last_error: str | None = None
     last_checked_at: datetime | None = None
+
+    # Mutual TLS material (PEM text) for "tcp://" connection URLs, mirroring
+    # the docker-machine/Docker CLI `--tlsverify --tlscacert --tlscert
+    # --tlskey` convention. ca_cert alone gives one-way verification of the
+    # daemon; client_cert+client_key together add client authentication.
+    # Not used for "ssh://" URLs, which authenticate via SSH keys instead.
+    tls_ca_cert: str | None = Field(default=None, sa_column=Column(Text))
+    tls_client_cert: str | None = Field(default=None, sa_column=Column(Text))
+    tls_client_key: str | None = Field(default=None, sa_column=Column(Text))

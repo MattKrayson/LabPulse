@@ -6,6 +6,7 @@ pydantic-settings>=2.7
 alembic>=1.14
 python-dotenv>=1.0
 docker>=7.1
+paramiko>=3.4
 psycopg2-binary>=2.9
 pyjwt>=2.9
 requests>=2.32

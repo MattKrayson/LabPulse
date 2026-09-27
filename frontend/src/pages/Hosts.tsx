@@ -7,6 +7,10 @@ export default function Hosts() {
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
   const [connectionUrl, setConnectionUrl] = useState("");
+  const [useTls, setUseTls] = useState(false);
+  const [tlsCaCert, setTlsCaCert] = useState("");
+  const [tlsClientCert, setTlsClientCert] = useState("");
+  const [tlsClientKey, setTlsClientKey] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -23,11 +27,25 @@ export default function Hosts() {
     event.preventDefault();
     setFormError(null);
     setSubmitting(true);
-    createHost(name.trim(), connectionUrl.trim())
+    createHost(
+      name.trim(),
+      connectionUrl.trim(),
+      useTls
+        ? {
+            tlsCaCert: tlsCaCert.trim(),
+            tlsClientCert: tlsClientCert.trim(),
+            tlsClientKey: tlsClientKey.trim(),
+          }
+        : undefined
+    )
       .then((host) => {
         setHosts((prev) => [...prev, host]);
         setName("");
         setConnectionUrl("");
+        setUseTls(false);
+        setTlsCaCert("");
+        setTlsClientCert("");
+        setTlsClientKey("");
       })
       .catch((err) => setFormError(err instanceof Error ? err.message : "Failed to add host"))
       .finally(() => setSubmitting(false));
@@ -63,40 +81,91 @@ export default function Hosts() {
         <section className="rounded-md border border-surface-border bg-surface-raised p-6">
           <h2 className="text-sm font-medium text-slate-400">Add a remote host</h2>
           <p className="mt-1 text-xs text-slate-500">
-            Connects over the Docker Engine API, e.g. <code>tcp://192.168.1.20:2375</code> or an
-            SSH URL like <code>ssh://user@192.168.1.20</code>. The remote daemon must have its API
-            exposed and reachable from this machine.
+            Connects over the Docker Engine API. Prefer an SSH URL like{" "}
+            <code>ssh://user@192.168.1.20</code> - it reuses your existing SSH keys and needs no
+            extra setup on the remote daemon. A <code>tcp://192.168.1.20:2376</code> URL works too,
+            but the remote daemon must be configured for TLS (below) - never expose the Docker API
+            over plain, unauthenticated TCP.
           </p>
-          <form onSubmit={handleAdd} className="mt-3 flex flex-wrap items-end gap-3">
-            <div>
-              <label className="block text-xs uppercase tracking-wide text-slate-500">Name</label>
-              <input
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Living Room NUC"
-                className="mt-1 rounded-md border border-surface-border bg-surface-base px-3 py-1.5 text-sm"
-              />
+          <form onSubmit={handleAdd} className="mt-3 space-y-3">
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label className="block text-xs uppercase tracking-wide text-slate-500">Name</label>
+                <input
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Living Room NUC"
+                  className="mt-1 rounded-md border border-surface-border bg-surface-base px-3 py-1.5 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs uppercase tracking-wide text-slate-500">
+                  Connection URL
+                </label>
+                <input
+                  required
+                  value={connectionUrl}
+                  onChange={(e) => setConnectionUrl(e.target.value)}
+                  placeholder="ssh://user@192.168.1.20"
+                  className="mt-1 w-64 rounded-md border border-surface-border bg-surface-base px-3 py-1.5 text-sm"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="rounded-md bg-sky-500/20 px-3 py-1.5 text-sm font-medium text-sky-400 hover:bg-sky-500/30 disabled:opacity-50"
+              >
+                {submitting ? "Adding…" : "Add host"}
+              </button>
             </div>
-            <div>
-              <label className="block text-xs uppercase tracking-wide text-slate-500">
-                Connection URL
-              </label>
-              <input
-                required
-                value={connectionUrl}
-                onChange={(e) => setConnectionUrl(e.target.value)}
-                placeholder="tcp://192.168.1.20:2375"
-                className="mt-1 w-64 rounded-md border border-surface-border bg-surface-base px-3 py-1.5 text-sm"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="rounded-md bg-sky-500/20 px-3 py-1.5 text-sm font-medium text-sky-400 hover:bg-sky-500/30 disabled:opacity-50"
-            >
-              {submitting ? "Adding…" : "Add host"}
-            </button>
+
+            <label className="flex items-center gap-2 text-xs text-slate-400">
+              <input type="checkbox" checked={useTls} onChange={(e) => setUseTls(e.target.checked)} />
+              Use TLS client authentication (for <code>tcp://</code> URLs, daemon started with{" "}
+              <code>--tlsverify</code>)
+            </label>
+
+            {useTls && (
+              <div className="grid gap-3 rounded-md border border-surface-border bg-surface-base p-3 sm:grid-cols-3">
+                <div>
+                  <label className="block text-xs uppercase tracking-wide text-slate-500">
+                    CA certificate (ca.pem)
+                  </label>
+                  <textarea
+                    value={tlsCaCert}
+                    onChange={(e) => setTlsCaCert(e.target.value)}
+                    rows={5}
+                    placeholder="-----BEGIN CERTIFICATE-----"
+                    className="mt-1 w-full rounded-md border border-surface-border bg-surface-raised px-2 py-1 font-mono text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wide text-slate-500">
+                    Client certificate (cert.pem)
+                  </label>
+                  <textarea
+                    value={tlsClientCert}
+                    onChange={(e) => setTlsClientCert(e.target.value)}
+                    rows={5}
+                    placeholder="-----BEGIN CERTIFICATE-----"
+                    className="mt-1 w-full rounded-md border border-surface-border bg-surface-raised px-2 py-1 font-mono text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wide text-slate-500">
+                    Client key (key.pem)
+                  </label>
+                  <textarea
+                    value={tlsClientKey}
+                    onChange={(e) => setTlsClientKey(e.target.value)}
+                    rows={5}
+                    placeholder="-----BEGIN PRIVATE KEY-----"
+                    className="mt-1 w-full rounded-md border border-surface-border bg-surface-raised px-2 py-1 font-mono text-xs"
+                  />
+                </div>
+              </div>
+            )}
           </form>
           {formError && <p className="mt-2 text-sm text-red-400">{formError}</p>}
         </section>

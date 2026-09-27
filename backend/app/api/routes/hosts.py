@@ -21,6 +21,16 @@ class HostCreate(BaseModel):
     name: str
     connection_url: str
     hostname: str | None = None
+    tls_ca_cert: str | None = None
+    tls_client_cert: str | None = None
+    tls_client_key: str | None = None
+
+
+def _validate_tls_fields(body: HostCreate) -> None:
+    if bool(body.tls_client_cert) != bool(body.tls_client_key):
+        raise HTTPException(
+            status_code=422, detail="tls_client_cert and tls_client_key must be provided together"
+        )
 
 
 @router.get("/hosts", response_model=list[Host])
@@ -33,13 +43,19 @@ def create_host(body: HostCreate, session: Session = Depends(get_session)) -> Ho
     existing = session.exec(select(Host).where(Host.name == body.name)).first()
     if existing is not None:
         raise HTTPException(status_code=409, detail="A host with this name already exists")
+    _validate_tls_fields(body)
 
-    ok, error = test_connection(body.connection_url)
+    ok, error = test_connection(
+        body.connection_url, body.tls_ca_cert, body.tls_client_cert, body.tls_client_key
+    )
     host = Host(
         name=body.name,
         hostname=body.hostname,
         is_local=False,
         connection_url=body.connection_url,
+        tls_ca_cert=body.tls_ca_cert,
+        tls_client_cert=body.tls_client_cert,
+        tls_client_key=body.tls_client_key,
         status="connected" if ok else "error",
         last_error=None if ok else error,
         last_checked_at=datetime.now(timezone.utc),
@@ -59,7 +75,7 @@ def test_host(host_id: int, session: Session = Depends(get_session)) -> Host:
         raise HTTPException(status_code=400, detail="The local host is always connected")
 
     reset_client_for_host(host.id)
-    ok, error = test_connection(host.connection_url)
+    ok, error = test_connection(host.connection_url, host.tls_ca_cert, host.tls_client_cert, host.tls_client_key)
     host.status = "connected" if ok else "error"
     host.last_error = None if ok else error
     host.last_checked_at = datetime.now(timezone.utc)

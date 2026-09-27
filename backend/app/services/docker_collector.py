@@ -13,11 +13,14 @@ containers for that poll.
 from __future__ import annotations
 
 import logging
+import os
+import tempfile
 from datetime import datetime, timezone
 from typing import Any
 
 import docker
 from docker.errors import DockerException
+from docker.tls import TLSConfig
 from sqlmodel import Session, select
 
 from app.models.container import Container
@@ -34,6 +37,41 @@ _client_error: str | None = None
 _remote_clients: dict[int, docker.DockerClient] = {}
 _remote_client_failed: set[int] = set()
 _remote_client_errors: dict[int, str] = {}
+# Keeps each host's temp cert directory alive for as long as its client is
+# cached; the TemporaryDirectory is deleted from disk once garbage collected.
+_remote_cert_dirs: dict[int, tempfile.TemporaryDirectory] = {}
+
+
+def _write_secret_file(directory: str, filename: str, content: str) -> str:
+    path = os.path.join(directory, filename)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(content)
+    return path
+
+
+def _build_tls_config(
+    ca_cert: str | None,
+    client_cert: str | None,
+    client_key: str | None,
+    cert_dir: str,
+) -> TLSConfig | None:
+    """Materialize PEM text as 0600 files and build docker-py's TLSConfig,
+    matching the docker CLI's --tlscacert/--tlscert/--tlskey convention."""
+    if not ca_cert and not (client_cert and client_key):
+        return None
+
+    ca_path = _write_secret_file(cert_dir, "ca.pem", ca_cert) if ca_cert else None
+    cert_pair = None
+    if client_cert and client_key:
+        cert_path = _write_secret_file(cert_dir, "cert.pem", client_cert)
+        key_path = _write_secret_file(cert_dir, "key.pem", client_key)
+        cert_pair = (cert_path, key_path)
+
+    # Always verify the server; ca_path pins the CA, otherwise fall back to
+    # the system trust store. There is no "skip verification" option here -
+    # exposing the Docker API insecurely is exactly what this feature avoids.
+    return TLSConfig(client_cert=cert_pair, ca_cert=ca_path, verify=ca_path or True)
 
 
 def get_client() -> docker.DockerClient | None:
@@ -76,17 +114,21 @@ def get_client_for_host(host: Host) -> docker.DockerClient | None:
     if host.id in _remote_client_failed:
         return None
 
+    cert_dir = tempfile.TemporaryDirectory(prefix=f"labpulse-host-{host.id}-")
     try:
-        client = docker.DockerClient(base_url=host.connection_url, timeout=5)
+        tls_config = _build_tls_config(host.tls_ca_cert, host.tls_client_cert, host.tls_client_key, cert_dir.name)
+        client = docker.DockerClient(base_url=host.connection_url, tls=tls_config, timeout=5)
         client.ping()
     except Exception as exc:  # noqa: BLE001 - docker-py raises a wide variety of errors
         logger.warning("Remote host %s (%s) is unreachable: %s", host.name, host.connection_url, exc)
         _remote_client_failed.add(host.id)
         _remote_client_errors[host.id] = str(exc)
+        cert_dir.cleanup()
         return None
 
     _remote_clients[host.id] = client
     _remote_client_errors.pop(host.id, None)
+    _remote_cert_dirs[host.id] = cert_dir
     return client
 
 
@@ -95,6 +137,9 @@ def reset_client_for_host(host_id: int) -> None:
     _remote_clients.pop(host_id, None)
     _remote_client_failed.discard(host_id)
     _remote_client_errors.pop(host_id, None)
+    cert_dir = _remote_cert_dirs.pop(host_id, None)
+    if cert_dir is not None:
+        cert_dir.cleanup()
 
 
 def last_connection_error(host: Host) -> str | None:
@@ -104,14 +149,21 @@ def last_connection_error(host: Host) -> str | None:
     return _remote_client_errors.get(host.id)
 
 
-def test_connection(connection_url: str) -> tuple[bool, str | None]:
+def test_connection(
+    connection_url: str,
+    tls_ca_cert: str | None = None,
+    tls_client_cert: str | None = None,
+    tls_client_key: str | None = None,
+) -> tuple[bool, str | None]:
     """Try connecting to a remote Docker Engine API URL. Returns (ok, error)."""
     try:
-        client = docker.DockerClient(base_url=connection_url, timeout=5)
-        try:
-            client.ping()
-        finally:
-            client.close()
+        with tempfile.TemporaryDirectory(prefix="labpulse-host-test-") as cert_dir:
+            tls_config = _build_tls_config(tls_ca_cert, tls_client_cert, tls_client_key, cert_dir)
+            client = docker.DockerClient(base_url=connection_url, tls=tls_config, timeout=5)
+            try:
+                client.ping()
+            finally:
+                client.close()
     except Exception as exc:  # noqa: BLE001 - docker-py raises a wide variety of errors
         return False, str(exc)
     return True, None

@@ -23,6 +23,15 @@ export interface Host {
   status: "connected" | "error" | "unknown";
   last_error: string | null;
   last_checked_at: string | null;
+  tls_ca_cert: string | null;
+  tls_client_cert: string | null;
+  tls_client_key: string | null;
+}
+
+export interface HostTlsFields {
+  tlsCaCert?: string;
+  tlsClientCert?: string;
+  tlsClientKey?: string;
 }
 
 export interface ContainerSummary {
@@ -102,11 +111,17 @@ export function getHosts(): Promise<Host[]> {
   return request<Host[]>("/hosts");
 }
 
-export function createHost(name: string, connectionUrl: string): Promise<Host> {
+export function createHost(name: string, connectionUrl: string, tls?: HostTlsFields): Promise<Host> {
   return request<Host>("/hosts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, connection_url: connectionUrl }),
+    body: JSON.stringify({
+      name,
+      connection_url: connectionUrl,
+      tls_ca_cert: tls?.tlsCaCert || null,
+      tls_client_cert: tls?.tlsClientCert || null,
+      tls_client_key: tls?.tlsClientKey || null,
+    }),
   });
 }
 
