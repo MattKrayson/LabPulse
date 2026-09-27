@@ -8,6 +8,7 @@ import IncidentDetail from "./pages/IncidentDetail";
 import Login from "./pages/Login";
 import SetupWizard from "./pages/SetupWizard";
 import DatabaseSettings from "./pages/DatabaseSettings";
+import About from "./pages/About";
 import { getMe, getSetupStatus } from "./api/client";
 
 export default function App() {
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="/incidents" element={<Incidents />} />
         <Route path="/incidents/:incidentId" element={<IncidentDetail />} />
         <Route path="/settings/database" element={<DatabaseSettings />} />
+        <Route path="/about" element={<About />} />
       </Routes>
     </HashRouter>
   );

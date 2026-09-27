@@ -13,6 +13,7 @@ import {
 } from "../api/client";
 import ResourceOverview from "../components/ResourceOverview";
 import { Field, SeverityDot, StateBadge, formatHealth } from "../components/shared";
+import labpulseLogo from "../resources/labpulse-logo.svg";
 
 type ConnectionState = "loading" | "online" | "offline";
 
@@ -86,6 +87,7 @@ export default function Dashboard() {
       <header className="border-b border-surface-border bg-surface-raised px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
+            <img src={labpulseLogo} alt="LabPulse" className="h-12 w-12" />
             <h1 className="text-lg font-semibold tracking-tight">LabPulse</h1>
             <Link to="/incidents" className="text-sm text-sky-400 hover:underline">
               Incidents
@@ -95,6 +97,9 @@ export default function Dashboard() {
             </Link>
             <Link to="/settings/database" className="text-sm text-sky-400 hover:underline">
               Database
+            </Link>
+            <Link to="/about" className="text-sm text-sky-400 hover:underline">
+              About
             </Link>
           </div>
           <div className="flex items-center gap-4">

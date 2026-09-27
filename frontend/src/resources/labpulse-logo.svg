@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" role="img" aria-labelledby="title desc">
+  <title id="title">LabPulse</title>
+  <desc id="desc">Container monitoring application logo with containers, pulse line and status gauge.</desc>
+  <defs>
+    <linearGradient id="gauge" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#1677ff"/>
+      <stop offset="1" stop-color="#20e6a5"/>
+    </linearGradient>
+    <linearGradient id="pulse" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#19d9c5"/>
+      <stop offset="1" stop-color="#42f59b"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1677ff"/>
+      <stop offset="1" stop-color="#1747bd"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#20d8cf"/>
+      <stop offset="1" stop-color="#159eaa"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Transparent background -->
+  <g transform="translate(400 300)">
+    <!-- Monitoring gauge -->
+    <path d="M-155 120 A200 200 0 1 1 155 120"
+          fill="none" stroke="url(#gauge)" stroke-width="24"
+          stroke-linecap="round"/>
+
+    <!-- Top container -->
+    <g transform="translate(0 -55)">
+      <path d="M-92-58 L0-82 L92-58 L0-34 Z" fill="#3b8cff"/>
+      <path d="M-92-58 L0-34 L0 40 L-92 17 Z" fill="url(#blue)"/>
+      <path d="M0-34 L92-58 L92 17 L0 40 Z" fill="#123c9e"/>
+      <g fill="#0b2f83" opacity=".8">
+        <path d="M-72-48 L-58-52 L-58 13 L-72 10Z"/>
+        <path d="M-45-55 L-31-59 L-31 20 L-45 17Z"/>
+        <path d="M-18-62 L-4-66 L-4 27 L-18 24Z"/>
+        <path d="M18-66 L32-62 L32 24 L18 27Z"/>
+        <path d="M45-59 L59-55 L59 17 L45 20Z"/>
+      </g>
+    </g>
+
+    <!-- Left container -->
+    <g transform="translate(-96 65)">
+      <path d="M-86-48 L0-70 L86-48 L0-27 Z" fill="#2de1d1"/>
+      <path d="M-86-48 L0-27 L0 55 L-86 33 Z" fill="url(#teal)"/>
+      <path d="M0-27 L86-48 L86 33 L0 55 Z" fill="#087e8f"/>
+      <g fill="#076b78" opacity=".85">
+        <path d="M-67-39 L-53-42 L-53 29 L-67 26Z"/>
+        <path d="M-40-46 L-26-49 L-26 36 L-40 33Z"/>
+        <path d="M-13-53 L1-56 L1 43 L-13 40Z"/>
+        <path d="M25-50 L39-47 L39 36 L25 39Z"/>
+      </g>
+    </g>
+
+    <!-- Right container -->
+    <g transform="translate(96 65)">
+      <path d="M-86-48 L0-70 L86-48 L0-27 Z" fill="#6b63ff"/>
+      <path d="M-86-48 L0-27 L0 55 L-86 33 Z" fill="#403fc1"/>
+      <path d="M0-27 L86-48 L86 33 L0 55 Z" fill="#302c9a"/>
+      <g fill="#24247d" opacity=".85">
+        <path d="M-67-39 L-53-42 L-53 29 L-67 26Z"/>
+        <path d="M-40-46 L-26-49 L-26 36 L-40 33Z"/>
+        <path d="M-13-53 L1-56 L1 43 L-13 40Z"/>
+        <path d="M25-50 L39-47 L39 36 L25 39Z"/>
+      </g>
+    </g>
+
+    <!-- Pulse -->
+    <path d="M-180 75 H-118 L-92 75 L-70 51 L-48 99 L-22 75 L0 75 L25-7 L48 99 L72 52 L94 75 H180"
+          fill="none" stroke="#39f5a5" stroke-width="14"
+          stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+    <path d="M-180 75 H-118 L-92 75 L-70 51 L-48 99 L-22 75 L0 75 L25-7 L48 99 L72 52 L94 75 H180"
+          fill="none" stroke="url(#pulse)" stroke-width="7"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="400" y="610" text-anchor="middle"
+        font-family="Inter,Segoe UI,Arial,sans-serif"
+        font-size="104" font-weight="800" letter-spacing="-4">
+    <tspan fill="#f5f7fb">Lab</tspan><tspan fill="#29e5a3">Pulse</tspan>
+  </text>
+
+  <text x="400" y="654" text-anchor="middle"
+        font-family="Inter,Segoe UI,Arial,sans-serif"
+        font-size="20" font-weight="500" letter-spacing="6"
+        fill="#8c98ad">CONTAINER OVERVIEW</text>
+</svg>
