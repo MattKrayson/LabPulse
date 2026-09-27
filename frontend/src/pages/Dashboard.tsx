@@ -120,6 +120,12 @@ export default function Dashboard() {
             <Link to="/changes" className="text-sm text-sky-400 hover:underline">
               What Changed?
             </Link>
+            <Link to="/settings/hosts" className="text-sm text-sky-400 hover:underline">
+              Hosts
+            </Link>
+            <Link to="/settings/webhooks" className="text-sm text-sky-400 hover:underline">
+              Webhooks
+            </Link>
             <Link to="/settings/database" className="text-sm text-sky-400 hover:underline">
               Database
             </Link>

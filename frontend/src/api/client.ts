@@ -19,6 +19,10 @@ export interface Host {
   hostname: string | null;
   is_local: boolean;
   created_at: string;
+  connection_url: string | null;
+  status: "connected" | "error" | "unknown";
+  last_error: string | null;
+  last_checked_at: string | null;
 }
 
 export interface ContainerSummary {
@@ -98,6 +102,22 @@ export function getHosts(): Promise<Host[]> {
   return request<Host[]>("/hosts");
 }
 
+export function createHost(name: string, connectionUrl: string): Promise<Host> {
+  return request<Host>("/hosts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, connection_url: connectionUrl }),
+  });
+}
+
+export function testHost(hostId: number): Promise<Host> {
+  return request<Host>(`/hosts/${hostId}/test`, { method: "POST" });
+}
+
+export function deleteHost(hostId: number): Promise<void> {
+  return request<void>(`/hosts/${hostId}`, { method: "DELETE" });
+}
+
 export function getContainers(): Promise<ContainerSummary[]> {
   return request<ContainerSummary[]>("/containers");
 }
@@ -174,6 +194,47 @@ export function getIncidents(status?: IncidentStatus): Promise<IncidentSummary[]
 
 export function getIncident(incidentId: number): Promise<IncidentDetail> {
   return request<IncidentDetail>(`/incidents/${incidentId}`);
+}
+
+export type WebhookFormat = "generic" | "discord" | "slack" | "ntfy";
+
+export interface Webhook {
+  id: number;
+  name: string;
+  url: string;
+  format: WebhookFormat;
+  enabled: boolean;
+  notify_on_open: boolean;
+  notify_on_resolve: boolean;
+  created_at: string;
+  last_triggered_at: string | null;
+  last_error: string | null;
+}
+
+export function getWebhooks(): Promise<Webhook[]> {
+  return request<Webhook[]>("/webhooks");
+}
+
+export function createWebhook(body: {
+  name: string;
+  url: string;
+  format: WebhookFormat;
+  notify_on_open: boolean;
+  notify_on_resolve: boolean;
+}): Promise<Webhook> {
+  return request<Webhook>("/webhooks", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteWebhook(webhookId: number): Promise<void> {
+  return request<void>(`/webhooks/${webhookId}`, { method: "DELETE" });
+}
+
+export function testWebhook(webhookId: number): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(`/webhooks/${webhookId}/test`, { method: "POST" });
 }
 
 export interface AuthUser {
