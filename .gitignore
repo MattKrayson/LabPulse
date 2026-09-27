@@ -35,3 +35,5 @@ Thumbs.db
 *.tar.gz
 *.tgz
 *.test
+/backend/migrations/
+.txt

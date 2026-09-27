@@ -21,6 +21,7 @@ from docker.errors import DockerException
 from sqlmodel import Session, select
 
 from app.models.container import Container
+from app.models.event import Category, Event, Severity
 from app.models.host import Host
 
 logger = logging.getLogger("labpulse.docker_collector")
@@ -88,6 +89,7 @@ def _extract_fields(attrs: dict[str, Any]) -> dict[str, Any] | None:
             "health_status": health.get("Status"),
             "restart_count": attrs.get("RestartCount", 0) or 0,
             "started_at": _parse_datetime(state.get("StartedAt")),
+            "last_error": state.get("Error") or None,
         }
     except (KeyError, AttributeError, TypeError) as exc:
         logger.warning("Skipping malformed container data: %s", exc)
@@ -144,6 +146,8 @@ def discover_containers(session: Session) -> int:
             select(Container).where(Container.container_id == fields["container_id"])
         ).first()
 
+        previous_error = existing.last_error if existing is not None else None
+
         if existing is None:
             existing = Container(host_id=host.id, first_seen_at=now, **fields)
         else:
@@ -153,6 +157,25 @@ def discover_containers(session: Session) -> int:
         existing.last_seen_at = now
         existing.is_present = True
         session.add(existing)
+
+        new_error = existing.last_error
+        if new_error and new_error != previous_error:
+            # Some start failures (e.g. port already allocated) never reach the
+            # Docker events stream at all, so this is the only place they surface.
+            session.add(
+                Event(
+                    timestamp=now,
+                    severity=Severity.CRITICAL,
+                    category=Category.DOCKER,
+                    source_type="container",
+                    source_id=existing.container_id,
+                    source_name=existing.name,
+                    title=f"{existing.name} failed to start",
+                    description=new_error,
+                    event_metadata={"source": "poll", "error": new_error},
+                )
+            )
+
 
     # Mark containers no longer reported by Docker as absent without deleting
     # their history (events/metrics may still reference them).

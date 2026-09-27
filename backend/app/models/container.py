@@ -32,6 +32,7 @@ class Container(SQLModel, table=True):
     health_status: str | None = None
     restart_count: int = 0
     started_at: datetime | None = None
+    last_error: str | None = None
 
     is_present: bool = Field(default=True, index=True)
     first_seen_at: datetime = Field(default_factory=_utcnow)
