@@ -112,7 +112,6 @@ export default function Dashboard() {
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <div className="flex items-center gap-3">
               <img src={labpulseLogo} alt="LabPulse" className="h-9 w-9 sm:h-12 sm:w-12" />
-              <h1 className="text-lg font-semibold tracking-tight">LabPulse</h1>
               <Link to="/" className="text-lg font-semibold tracking-tight hover:underline">
                 LabPulse
               </Link>
