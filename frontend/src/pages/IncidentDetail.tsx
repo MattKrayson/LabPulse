@@ -74,11 +74,16 @@ export default function IncidentDetail() {
               <ul className="mt-3 divide-y divide-surface-border text-sm">
                 {incident.events.map((event) => (
                   <li key={event.id} className="flex items-start gap-3 py-2">
-                    <span className="w-40 shrink-0 font-mono text-xs text-slate-500">
+                    <span className="w-40 shrink-0 pt-0.5 font-mono text-xs text-slate-500">
                       {new Date(event.timestamp).toLocaleString()}
                     </span>
                     <SeverityDot severity={event.severity} />
-                    <span className="text-slate-200">{event.title}</span>
+                    <div>
+                      <span className="text-slate-200">{event.title}</span>
+                      {event.description && (
+                        <p className="whitespace-pre-wrap text-xs text-slate-500">{event.description}</p>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>

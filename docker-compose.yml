@@ -1,10 +1,10 @@
 services:
   labpulse:
     # Pulls the pre-built image from GHCR by default; uncomment `build:` to build locally instead.
-    # image: ghcr.io/mattkrayson/labpulse:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/mattkrayson/labpulse:latest
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
     container_name: labpulse
     restart: unless-stopped
     ports:
