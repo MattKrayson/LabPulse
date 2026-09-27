@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     admin_password: str = "admin"
     # Signs session tokens - set a real random value in production via LABPULSE_SECRET_KEY.
     secret_key: str = "insecure-dev-secret-change-me"
+    # 7 days, with no refresh/rotation - a deliberate tradeoff for a homelab tool
+    # you log into occasionally rather than a multi-user product, so sessions
+    # outlive short browser sessions. Lower this if that tradeoff doesn't suit you.
     session_expire_minutes: int = 60 * 24 * 7
 
     @property
