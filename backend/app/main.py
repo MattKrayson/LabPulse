@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session
 
 from app.api.deps import require_auth
-from app.api.routes import auth, changes, containers, events, health, hosts, incidents, metrics, setup, stats
+from app.api.routes import auth, changes, containers, events, health, hosts, incidents, metrics, setup, stats, webhooks
 from app.core import database
 from app.core.config import get_settings
 from app.services.docker_collector import discover_containers
@@ -205,6 +205,7 @@ app.include_router(metrics.router, prefix="/api", dependencies=_auth_dep)
 app.include_router(stats.router, prefix="/api", dependencies=_auth_dep)
 app.include_router(changes.router, prefix="/api", dependencies=_auth_dep)
 app.include_router(incidents.router, prefix="/api", dependencies=_auth_dep)
+app.include_router(webhooks.router, prefix="/api", dependencies=_auth_dep)
 
 
 

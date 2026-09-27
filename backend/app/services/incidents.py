@@ -11,6 +11,7 @@ from sqlmodel import Session, select
 
 from app.models.event import Event, Severity
 from app.models.incident import Incident, IncidentEvent, IncidentStatus
+from app.services.webhooks import notify_incident
 
 _CORRELATION_GAP = timedelta(minutes=5)
 _SEVERITY_RANK = {
@@ -61,6 +62,8 @@ def correlate_incidents(session: Session, gap: timedelta = _CORRELATION_GAP) -> 
                 if current is not None:
                     current.status = IncidentStatus.RESOLVED
                     session.add(current)
+                    session.commit()
+                    notify_incident(session, current, "incident.resolved")
                 current = Incident(
                     source_type=event.source_type,
                     source_id=event.source_id,
@@ -74,6 +77,8 @@ def correlate_incidents(session: Session, gap: timedelta = _CORRELATION_GAP) -> 
                 )
                 session.add(current)
                 session.flush()
+                session.commit()
+                notify_incident(session, current, "incident.opened")
 
             session.add(IncidentEvent(incident_id=current.id, event_id=event.id))
             attached += 1
@@ -93,5 +98,7 @@ def correlate_incidents(session: Session, gap: timedelta = _CORRELATION_GAP) -> 
         session.add(incident)
     if stale_open:
         session.commit()
+        for incident in stale_open:
+            notify_incident(session, incident, "incident.resolved")
 
     return attached

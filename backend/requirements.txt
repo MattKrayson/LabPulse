@@ -8,6 +8,7 @@ python-dotenv>=1.0
 docker>=7.1
 psycopg2-binary>=2.9
 pyjwt>=2.9
+requests>=2.32
 
 # testing
 pytest>=8.3
