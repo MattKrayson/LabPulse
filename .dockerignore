@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/.git
+**/.vscode
+**/.venv
+**/venv
+**/__pycache__
+**/*.db
+data
+.env
+docs
+*.md

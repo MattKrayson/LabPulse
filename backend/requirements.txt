@@ -1,0 +1,14 @@
+fastapi>=0.115
+uvicorn[standard]>=0.34
+sqlmodel>=0.0.22
+pydantic>=2.9
+pydantic-settings>=2.7
+alembic>=1.14
+python-dotenv>=1.0
+docker>=7.1
+psycopg2-binary>=2.9
+pyjwt>=2.9
+
+# testing
+pytest>=8.3
+httpx>=0.28

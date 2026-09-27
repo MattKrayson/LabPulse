@@ -1,0 +1,36 @@
+services:
+  labpulse:
+    # Pulls the pre-built image from GHCR by default; uncomment `build:` to build locally instead.
+    # image: ghcr.io/mattkrayson/labpulse:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: labpulse
+    restart: unless-stopped
+    ports:
+      - "8080:8000"
+    environment:
+      # Leave LABPULSE_DATABASE_URL unset/blank to use the built-in SQLite database
+      # (stored on the labpulse-data volume below), or set it to a full SQLAlchemy
+      # URL (e.g. postgresql+psycopg2://user:pass@host:5432/db) to use an external database.
+      LABPULSE_DATABASE_URL: ${LABPULSE_DATABASE_URL:-}
+      LABPULSE_DATABASE: /data/labpulse.db
+      LABPULSE_EVENT_RETENTION_DAYS: ${LABPULSE_EVENT_RETENTION_DAYS:-30}
+      LABPULSE_METRIC_RETENTION_DAYS: ${LABPULSE_METRIC_RETENTION_DAYS:-7}
+      LABPULSE_POLL_INTERVAL: ${LABPULSE_POLL_INTERVAL:-15}
+      # Login credentials for the single shared admin account - change these.
+      LABPULSE_ADMIN_USERNAME: ${LABPULSE_ADMIN_USERNAME:-admin}
+      LABPULSE_ADMIN_PASSWORD: ${LABPULSE_ADMIN_PASSWORD:-admin}
+      LABPULSE_SECRET_KEY: ${LABPULSE_SECRET_KEY:-insecure-dev-secret-change-me}
+    volumes:
+      - labpulse-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  labpulse-data:
