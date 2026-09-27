@@ -15,7 +15,7 @@ export default function About() {
 
       <main className="mx-auto max-w-2xl p-6">
         <section className="rounded-md border border-surface-border bg-surface-raised p-8 text-center">
-          <img src={labpulseLogo} alt="LabPulse" className="mx-auto h-24 w-24" />
+          <img src={labpulseLogo} alt="LabPulse" className="mx-auto h-40 w-40" />
           <h2 className="mt-4 text-xl font-semibold tracking-tight">LabPulse</h2>
           <p className="mt-2 text-sm text-slate-400">
             A self-hosted homelab observability and incident-history platform.
