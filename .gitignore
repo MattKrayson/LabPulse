@@ -34,3 +34,4 @@ Thumbs.db
 # Build/dev artifacts
 *.tar.gz
 *.tgz
+*.test
