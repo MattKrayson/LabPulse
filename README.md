@@ -1,6 +1,6 @@
 # LabPulse
 
-<img src="frontend/src/resources/labpulse-logo.svg" alt="LabPulse logo" width="120" />
+<img src="frontend/src/resources/labpulse-logo.svg" alt="LabPulse logo" width="220" />
 
 LabPulse is something I built for my own homelab because I got tired of
 staring at Portainer wondering *"didn't this container just restart a
