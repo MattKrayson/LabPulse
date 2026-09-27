@@ -147,13 +147,13 @@ export default function ContainerDetail() {
 
   return (
     <div className="min-h-full">
-      <header className="border-b border-surface-border bg-surface-raised px-6 py-4">
+      <header className="border-b border-surface-border bg-surface-raised px-4 py-4 sm:px-6">
         <Link to="/" className="text-sm text-sky-400 hover:underline">
           ← Back to dashboard
         </Link>
       </header>
 
-      <main className="p-6">
+      <main className="p-4 sm:p-6">
         <section className="rounded-md border border-surface-border bg-surface-raised p-6">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-lg font-semibold tracking-tight text-slate-100">
@@ -183,7 +183,7 @@ export default function ContainerDetail() {
           )}
         </section>
 
-        <section className="mt-6 flex items-center gap-2">
+        <section className="mt-6 flex flex-wrap items-center gap-2">
           <span className="text-xs uppercase tracking-wide text-slate-500">Time range</span>
           {RANGES.map((r) => (
             <button

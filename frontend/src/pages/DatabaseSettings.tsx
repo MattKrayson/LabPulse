@@ -15,8 +15,8 @@ export default function DatabaseSettings() {
 
   return (
     <div className="min-h-full">
-      <header className="border-b border-surface-border bg-surface-raised px-6 py-4">
-        <div className="flex items-center gap-4">
+      <header className="border-b border-surface-border bg-surface-raised px-4 py-4 sm:px-6">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <Link to="/" className="text-sm text-sky-400 hover:underline">
             ← Dashboard
           </Link>

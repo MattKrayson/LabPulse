@@ -4,8 +4,8 @@ import labpulseLogo from "../resources/labpulse-logo.svg";
 export default function About() {
   return (
     <div className="min-h-full">
-      <header className="border-b border-surface-border bg-surface-raised px-6 py-4">
-        <div className="flex items-center gap-4">
+      <header className="border-b border-surface-border bg-surface-raised px-4 py-4 sm:px-6">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <Link to="/" className="text-sm text-sky-400 hover:underline">
             ← Dashboard
           </Link>
@@ -13,7 +13,7 @@ export default function About() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl p-6">
+      <main className="mx-auto max-w-2xl p-4 sm:p-6">
         <section className="rounded-md border border-surface-border bg-surface-raised p-8 text-center">
           <img src={labpulseLogo} alt="LabPulse" className="mx-auto h-40 w-40" />
           <h2 className="mt-4 text-xl font-semibold tracking-tight">LabPulse</h2>

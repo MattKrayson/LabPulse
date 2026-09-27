@@ -84,11 +84,13 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-full">
-      <header className="border-b border-surface-border bg-surface-raised px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img src={labpulseLogo} alt="LabPulse" className="h-12 w-12" />
-            <h1 className="text-lg font-semibold tracking-tight">LabPulse</h1>
+      <header className="border-b border-surface-border bg-surface-raised px-4 py-4 sm:px-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <div className="flex items-center gap-3">
+              <img src={labpulseLogo} alt="LabPulse" className="h-9 w-9 sm:h-12 sm:w-12" />
+              <h1 className="text-lg font-semibold tracking-tight">LabPulse</h1>
+            </div>
             <Link to="/incidents" className="text-sm text-sky-400 hover:underline">
               Incidents
             </Link>
@@ -115,7 +117,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="p-6">
+      <main className="p-4 sm:p-6">
         {dataError && (
           <p className="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-400">
             Some dashboard data failed to load. Retrying automatically every 15 seconds.
