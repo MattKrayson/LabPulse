@@ -2,10 +2,12 @@
 import asyncio
 import contextlib
 import logging
+import time
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session
@@ -21,8 +23,11 @@ from app.services.metrics_collector import collect_metrics
 from app.services.retention import cleanup_events, cleanup_incidents, cleanup_metrics, cleanup_snapshots
 from app.services.snapshots import capture_snapshot
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+
 settings = get_settings()
 logger = logging.getLogger("labpulse.main")
+access_logger = logging.getLogger("labpulse.access")
 
 _poll_task: asyncio.Task | None = None
 _metrics_task: asyncio.Task | None = None
@@ -167,6 +172,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def request_logging_middleware(request: Request, call_next):
+    """Log every request with a correlation ID, for tracing issues on a
+    monitoring tool that should be at least as observable as what it watches."""
+    request_id = uuid.uuid4().hex[:12]
+    start = time.monotonic()
+    response = await call_next(request)
+    duration_ms = (time.monotonic() - start) * 1000
+    response.headers["X-Request-ID"] = request_id
+    access_logger.info(
+        "request_id=%s method=%s path=%s status=%s duration_ms=%.1f",
+        request_id,
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
+    return response
 
 app.include_router(health.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
