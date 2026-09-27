@@ -30,11 +30,15 @@ LOCAL_HOST_NAME = "Local Docker Host"
 
 _client: docker.DockerClient | None = None
 _client_failed = False
+_client_error: str | None = None
+_remote_clients: dict[int, docker.DockerClient] = {}
+_remote_client_failed: set[int] = set()
+_remote_client_errors: dict[int, str] = {}
 
 
 def get_client() -> docker.DockerClient | None:
-    """Return a cached Docker client, or None if Docker is unreachable."""
-    global _client, _client_failed
+    """Return a cached Docker client for the local host, or None if unreachable."""
+    global _client, _client_failed, _client_error
 
     if _client is not None:
         return _client
@@ -47,6 +51,7 @@ def get_client() -> docker.DockerClient | None:
     except Exception as exc:  # noqa: BLE001 - docker-py raises a wide variety of errors
         logger.warning("Docker is unavailable: %s", exc)
         _client_failed = True
+        _client_error = str(exc)
         return None
 
     _client = client
@@ -55,9 +60,61 @@ def get_client() -> docker.DockerClient | None:
 
 def reset_client() -> None:
     """Force re-connection on the next call (e.g. after Docker restarts)."""
-    global _client, _client_failed
+    global _client, _client_failed, _client_error
     _client = None
     _client_failed = False
+    _client_error = None
+
+
+def get_client_for_host(host: Host) -> docker.DockerClient | None:
+    """Return a cached Docker client for `host` (local or remote), or None if unreachable."""
+    if host.is_local or not host.connection_url:
+        return get_client()
+
+    if host.id in _remote_clients:
+        return _remote_clients[host.id]
+    if host.id in _remote_client_failed:
+        return None
+
+    try:
+        client = docker.DockerClient(base_url=host.connection_url, timeout=5)
+        client.ping()
+    except Exception as exc:  # noqa: BLE001 - docker-py raises a wide variety of errors
+        logger.warning("Remote host %s (%s) is unreachable: %s", host.name, host.connection_url, exc)
+        _remote_client_failed.add(host.id)
+        _remote_client_errors[host.id] = str(exc)
+        return None
+
+    _remote_clients[host.id] = client
+    _remote_client_errors.pop(host.id, None)
+    return client
+
+
+def reset_client_for_host(host_id: int) -> None:
+    """Force re-connection to a remote host on its next poll."""
+    _remote_clients.pop(host_id, None)
+    _remote_client_failed.discard(host_id)
+    _remote_client_errors.pop(host_id, None)
+
+
+def last_connection_error(host: Host) -> str | None:
+    """Return the most recent connection error for `host`, if it's currently unreachable."""
+    if host.is_local:
+        return _client_error if _client_failed else None
+    return _remote_client_errors.get(host.id)
+
+
+def test_connection(connection_url: str) -> tuple[bool, str | None]:
+    """Try connecting to a remote Docker Engine API URL. Returns (ok, error)."""
+    try:
+        client = docker.DockerClient(base_url=connection_url, timeout=5)
+        try:
+            client.ping()
+        finally:
+            client.close()
+    except Exception as exc:  # noqa: BLE001 - docker-py raises a wide variety of errors
+        return False, str(exc)
+    return True, None
 
 
 def _parse_datetime(value: str | None) -> datetime | None:
@@ -106,27 +163,27 @@ def ensure_local_host(session: Session) -> Host:
     return host
 
 
-def discover_containers(session: Session) -> int:
-    """Poll Docker once and upsert container rows.
-
-    Returns the number of containers currently reported by Docker (0 if
-    Docker is unavailable, which is not treated as an error).
-    """
-    host = ensure_local_host(session)
-
-    client = get_client()
+def _discover_for_host(session: Session, host: Host, now: datetime) -> int:
+    """Poll one host and upsert its container rows. Returns containers seen."""
+    client = get_client_for_host(host)
     if client is None:
+        host.status = "error"
+        host.last_error = last_connection_error(host)
+        host.last_checked_at = now
+        session.add(host)
         return 0
 
     try:
         containers = client.containers.list(all=True)
     except DockerException as exc:
-        logger.warning("Failed to list containers: %s", exc)
-        reset_client()
+        logger.warning("Failed to list containers on host %s: %s", host.name, exc)
+        if host.is_local:
+            reset_client()
+        else:
+            reset_client_for_host(host.id)
         return 0
 
     seen_ids: set[str] = set()
-    now = datetime.now(timezone.utc)
 
     for raw in containers:
         try:
@@ -154,6 +211,7 @@ def discover_containers(session: Session) -> int:
             for key, value in fields.items():
                 setattr(existing, key, value)
 
+        existing.host_id = host.id
         existing.last_seen_at = now
         existing.is_present = True
         session.add(existing)
@@ -176,9 +234,8 @@ def discover_containers(session: Session) -> int:
                 )
             )
 
-
-    # Mark containers no longer reported by Docker as absent without deleting
-    # their history (events/metrics may still reference them).
+    # Mark containers no longer reported by this host's Docker as absent
+    # without deleting their history (events/metrics may still reference them).
     previously_present = session.exec(
         select(Container).where(Container.host_id == host.id, Container.is_present == True)  # noqa: E712
     ).all()
@@ -187,5 +244,28 @@ def discover_containers(session: Session) -> int:
             container.is_present = False
             session.add(container)
 
-    session.commit()
+    host.status = "connected"
+    host.last_error = None
+    host.last_checked_at = now
+    session.add(host)
+
     return len(seen_ids)
+
+
+def discover_containers(session: Session) -> int:
+    """Poll every configured host once and upsert their container rows.
+
+    Returns the total number of containers currently reported across all
+    hosts (0 if none are reachable, which is not treated as an error).
+    """
+    local_host = ensure_local_host(session)
+    remote_hosts = session.exec(select(Host).where(Host.is_local == False)).all()  # noqa: E712
+
+    now = datetime.now(timezone.utc)
+    total_seen = 0
+    for host in (local_host, *remote_hosts):
+        total_seen += _discover_for_host(session, host, now)
+
+    session.commit()
+    return total_seen
+
