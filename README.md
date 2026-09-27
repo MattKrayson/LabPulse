@@ -122,6 +122,13 @@ There's no multi-user support and no fine-grained permissions — it's
 built on the assumption that this sits on a private homelab network
 behind your own firewall, not exposed to the internet.
 
+**Do not expose this to the internet** — not via port-forwarding, and not
+via a reverse proxy either, even "just for now." There's a single shared
+admin account with no multi-factor login and no per-user audit trail, so
+anyone who reaches the login page only needs to guess (or brute force)
+one password to get full access. Keep it on your LAN or behind a VPN
+(e.g. Tailscale/WireGuard) if you want to reach it remotely.
+
 ## Data and backups
 
 Everything (the SQLite database, if you're using it) lives on the
