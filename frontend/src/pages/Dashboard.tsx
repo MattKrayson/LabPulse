@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   getContainers,
@@ -16,6 +16,17 @@ import { Field, SeverityDot, StateBadge, formatHealth } from "../components/shar
 import labpulseLogo from "../resources/labpulse-logo.svg";
 
 type ConnectionState = "loading" | "online" | "offline";
+type ContainerFilter = "all" | "healthy" | "warning" | "critical";
+
+/** Mirrors the backend's Container -> healthy/warning/critical classification in app/api/routes/stats.py. */
+function classifyContainer(c: ContainerSummary): "healthy" | "warning" | "critical" {
+  if (c.state === "running") {
+    return c.health_status === "unhealthy" ? "warning" : "healthy";
+  }
+  if (c.state === "restarting" || c.state === "paused") return "warning";
+  if (c.state === "exited" || c.state === "dead") return "critical";
+  return "warning";
+}
 
 export default function Dashboard() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
@@ -24,6 +35,10 @@ export default function Dashboard() {
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [dataError, setDataError] = useState(false);
+  const [containerFilter, setContainerFilter] = useState<ContainerFilter>("all");
+  const [errorsOnly, setErrorsOnly] = useState(false);
+  const containersRef = useRef<HTMLElement | null>(null);
+  const timelineRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,6 +97,14 @@ export default function Dashboard() {
     };
   }, []);
 
+  const filteredContainers =
+    containerFilter === "all"
+      ? containers
+      : containers.filter((c) => classifyContainer(c) === containerFilter);
+  const filteredEvents = errorsOnly
+    ? events.filter((e) => e.severity === "ERROR" || e.severity === "CRITICAL")
+    : events;
+
   return (
     <div className="min-h-full">
       <header className="border-b border-surface-border bg-surface-raised px-4 py-4 sm:px-6">
@@ -125,11 +148,50 @@ export default function Dashboard() {
         )}
 
         <section className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-          <StatCard label="Total Containers" value={stats?.total_containers} />
-          <StatCard label="Healthy" value={stats?.healthy} tone="healthy" />
-          <StatCard label="Warning" value={stats?.warning} tone="warning" />
-          <StatCard label="Critical" value={stats?.critical} tone="critical" />
-          <StatCard label="Errors (24h)" value={stats?.recent_errors} tone="critical" />
+          <StatCard
+            label="Total Containers"
+            value={stats?.total_containers}
+            onClick={() => {
+              setContainerFilter("all");
+              containersRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+          />
+          <StatCard
+            label="Healthy"
+            value={stats?.healthy}
+            tone="healthy"
+            onClick={() => {
+              setContainerFilter("healthy");
+              containersRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+          />
+          <StatCard
+            label="Warning"
+            value={stats?.warning}
+            tone="warning"
+            onClick={() => {
+              setContainerFilter("warning");
+              containersRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+          />
+          <StatCard
+            label="Critical"
+            value={stats?.critical}
+            tone="critical"
+            onClick={() => {
+              setContainerFilter("critical");
+              containersRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+          />
+          <StatCard
+            label="Errors (24h)"
+            value={stats?.recent_errors}
+            tone="critical"
+            onClick={() => {
+              setErrorsOnly(true);
+              timelineRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+          />
           <Link to="/incidents">
             <StatCard label="Recent Incidents" value={stats?.recent_incidents} tone="warning" />
           </Link>
@@ -155,16 +217,28 @@ export default function Dashboard() {
         <section>
           <ResourceOverview containers={containers} />
         </section>
-        <section className="mt-6 rounded-md border border-surface-border bg-surface-raised p-6">
-          <div className="flex items-center justify-between">
+        <section ref={containersRef} className="mt-6 rounded-md border border-surface-border bg-surface-raised p-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-sm font-medium text-slate-400">
-              Containers ({containers.length})
+              Containers ({filteredContainers.length}
+              {containerFilter !== "all" ? ` of ${containers.length}` : ""})
             </h2>
+            {containerFilter !== "all" && (
+              <button
+                type="button"
+                onClick={() => setContainerFilter("all")}
+                className="text-xs text-sky-400 hover:underline"
+              >
+                Clear filter ({containerFilter})
+              </button>
+            )}
           </div>
 
-          {containers.length === 0 ? (
+          {filteredContainers.length === 0 ? (
             <p className="mt-3 text-slate-400">
-              No containers discovered yet. LabPulse polls Docker every 15 seconds.
+              {containers.length === 0
+                ? "No containers discovered yet. LabPulse polls Docker every 15 seconds."
+                : "No containers match this filter."}
             </p>
           ) : (
             <div className="mt-3 overflow-x-auto">
@@ -179,7 +253,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-border">
-                {containers.map((c) => (
+                {filteredContainers.map((c) => (
                   <tr key={c.container_id}>
                     <td className="py-2 pr-4 font-medium text-slate-200">
                       <Link
@@ -203,16 +277,29 @@ export default function Dashboard() {
           )}
         </section>
 
-        <section className="mt-6 rounded-md border border-surface-border bg-surface-raised p-6">
-          <h2 className="text-sm font-medium text-slate-400">Recent timeline</h2>
+        <section ref={timelineRef} className="mt-6 rounded-md border border-surface-border bg-surface-raised p-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-medium text-slate-400">Recent timeline</h2>
+            {errorsOnly && (
+              <button
+                type="button"
+                onClick={() => setErrorsOnly(false)}
+                className="text-xs text-sky-400 hover:underline"
+              >
+                Clear filter (errors only)
+              </button>
+            )}
+          </div>
 
-          {events.length === 0 ? (
+          {filteredEvents.length === 0 ? (
             <p className="mt-3 text-slate-400">
-              No events recorded yet. Start, stop, or restart a container to see it appear here.
+              {events.length === 0
+                ? "No events recorded yet. Start, stop, or restart a container to see it appear here."
+                : "No events match this filter."}
             </p>
           ) : (
             <ul className="mt-3 divide-y divide-surface-border text-sm">
-              {events.map((event) => (
+              {filteredEvents.map((event) => (
                 <li key={event.id} className="flex items-start gap-3 py-2">
                   <span className="w-20 shrink-0 pt-0.5 font-mono text-xs text-slate-500">
                     {new Date(event.timestamp).toLocaleTimeString()}
@@ -260,10 +347,12 @@ function StatCard({
   label,
   value,
   tone = "neutral",
+  onClick,
 }: {
   label: string;
   value: number | undefined;
   tone?: Tone;
+  onClick?: () => void;
 }) {
   const valueStyles: Record<Tone, string> = {
     neutral: "text-slate-100",
@@ -272,12 +361,26 @@ function StatCard({
     critical: "text-red-400",
   };
 
-  return (
-    <div className="rounded-md border border-surface-border bg-surface-raised p-4">
+  const content = (
+    <>
       <dt className="text-xs uppercase tracking-wide text-slate-500">{label}</dt>
       <dd className={`mt-1 text-2xl font-semibold ${valueStyles[tone]}`}>
         {value ?? "—"}
       </dd>
-    </div>
+    </>
   );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="rounded-md border border-surface-border bg-surface-raised p-4 text-left transition hover:border-sky-500/50 hover:bg-surface-raised/80"
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return <div className="rounded-md border border-surface-border bg-surface-raised p-4">{content}</div>;
 }
